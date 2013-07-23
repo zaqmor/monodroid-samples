@@ -25,6 +25,8 @@ using Android.OS;
 using Android.Util;
 using Android.Views;
 
+using System.Threading.Tasks;
+
 namespace JetBoy
 {
 	// JET info: the JetBoyThread receives all the events from the JET player
@@ -304,7 +306,7 @@ namespace JetBoy
 
 		#region Initialization
 		// Does the grunt work of setting up initial jet requirements
-		private void InitializeJetPlayer ()
+		private async Task InitializeJetPlayer ()
 		{
 			// JET info: let's create our JetPlayer instance using the factory.
 			// JET info: if we already had one, the same singleton is returned.
@@ -329,7 +331,8 @@ namespace JetBoy
 			// JET info: it's stored as a raw resource in our APK, and is labeled "level1"
 			// JET info: if our JET file was stored on the sdcard for instance, we would have used
 			// JET info: mJet.loadJetFile("/sdcard/level1.jet");
-			mJet.LoadJetFile (mContext.Resources.OpenRawResourceFd (Resource.Raw.level1));
+			//mJet.LoadJetFile (mContext.Resources.OpenRawResourceFd (Resource.Raw.level1));
+			await mJet.LoadJetFileAsync (mContext.Resources.OpenRawResourceFd (Resource.Raw.level1));
 
 			Log.Debug (TAG, "opening jet file DONE");
 
@@ -363,14 +366,14 @@ namespace JetBoy
 			Log.Debug (TAG, " start queuing jet file DONE");
 		}
 
-		private void SetInitialGameState ()
+		private async Task SetInitialGameState ()
 		{
 			mTimerLimit = TIMER_LIMIT;
 
 			mJetBoyY = mJetBoyYMin;
 
 			// set up jet stuff
-			InitializeJetPlayer ();
+			await InitializeJetPlayer ();
 
 			mTimer = new Java.Util.Timer ();
 
@@ -507,7 +510,7 @@ namespace JetBoy
 		#endregion
 
 		#region Game Logic
-		public override void Run ()
+		public override async void Run ()
 		{
 			while (mRun) {
 				Canvas c = null;
@@ -535,7 +538,7 @@ namespace JetBoy
 						mTimer.Schedule (mTimerTask, mTaskIntervalInMillis);
 					}
 				} else if (mState == GameState.Play && !mInitialized) {
-					SetInitialGameState ();
+					await SetInitialGameState ();
 				} else if (mState == GameState.Lost) {
 					mInitialized = false;
 				}
