@@ -26,6 +26,8 @@ using Java.Lang;
 using Java.Util;
 
 using System;
+using System.Threading.Tasks;
+
 using String = System.String;
 using File = Java.IO.File;
 using Uri = Android.Net.Uri;
@@ -183,7 +185,8 @@ namespace com.example.monodroid.hcgallery
 			((ImageView) View.FindViewById (Resource.Id.image)).SetImageBitmap (mBitmap);
 		}
 		
-		void ShareCurrentPhoto () 
+		//void ShareCurrentPhoto () 
+		async Task ShareCurrentPhoto()
 		{
 			File externalCacheDir = Activity.ExternalCacheDir;
 			if (externalCacheDir == null) {
@@ -204,40 +207,63 @@ namespace com.example.monodroid.hcgallery
 			// {@link AsyncTask} class, thus avoiding the possibility of stalling the main (UI) thread.
 			
 			File tempFile = new File (externalCacheDir, "tempfile.jpg");
-			
-			new AsyncTaskImpl (delegate (Java.Lang.Object [] parms) {
-				/**
-				* Compress and write the bitmap to disk on a separate thread.
-				* @return TRUE if the write was successful, FALSE otherwise.
-				*/
-				try {
-					var fo = System.IO.File.OpenWrite (tempFile.AbsolutePath);
-					if (!mBitmap.Compress (Bitmap.CompressFormat.Jpeg, 60, fo)) {
-						Toast.MakeText (Activity, "Error writing bitmap data.", ToastLength.Short).Show ();
-						return false;
-					}
-					return true;
-					
-				} catch (FileNotFoundException e) {
-					Toast.MakeText (Activity, "Error writing to USB/external storage.", ToastLength.Short).Show ();
-					return false;
+			bool compressSuccessfully = false;
+			var fo = System.IO.File.OpenWrite (tempFile.AbsolutePath);
+			try {
+				if(!await mBitmap.CompressAsync (Bitmap.CompressFormat.Jpeg, 60, fo)){
+					Toast.MakeText (Activity, "Error writing bitmap data.", ToastLength.Short).Show ();
+					compressSuccessfully = false;
 				}
-			}, delegate {
-				throw new System.NotImplementedException ();
-			}, delegate (bool result) {
-				/**
-				* After doInBackground completes (either successfully or in failure), we invoke an
-				* intent to share the photo. This code is run on the main (UI) thread.
-				*/
-				if (result != true) {
-					return;
-				}
-					
+				compressSuccessfully = true;
+			}
+			catch (FileNotFoundException e) {
+				Toast.MakeText (Activity, "Error writing to USB/external storage.", ToastLength.Short).Show ();
+				compressSuccessfully = false;
+			}
+			fo.Close ();
+			if(compressSuccessfully = true)
+			{
 				Intent shareIntent = new Intent (Intent.ActionSend);
 				shareIntent.PutExtra (Intent.ExtraStream, Uri.FromFile (tempFile));
 				shareIntent.SetType ("image/jpeg");
 				StartActivity (Intent.CreateChooser (shareIntent, "Share photo"));
-			}).Execute ();
+
+			}
+
+
+//			new AsyncTaskImpl (delegate (Java.Lang.Object [] parms) {
+//				/**
+//				* Compress and write the bitmap to disk on a separate thread.
+//				* @return TRUE if the write was successful, FALSE otherwise.
+//				*/
+//				try {
+//					var fo = System.IO.File.OpenWrite (tempFile.AbsolutePath);
+//					if (!mBitmap.Compress (Bitmap.CompressFormat.Jpeg, 60, fo)) {
+//						Toast.MakeText (Activity, "Error writing bitmap data.", ToastLength.Short).Show ();
+//						return false;
+//					}
+//					return true;
+//					
+//				} catch (FileNotFoundException e) {
+//					Toast.MakeText (Activity, "Error writing to USB/external storage.", ToastLength.Short).Show ();
+//					return false;
+//				}
+//			}, delegate {
+//				throw new System.NotImplementedException ();
+//			}, delegate (bool result) {
+//				/**
+//				* After doInBackground completes (either successfully or in failure), we invoke an
+//				* intent to share the photo. This code is run on the main (UI) thread.
+//				*/
+//				if (result != true) {
+//					return;
+//				}
+//					
+//				Intent shareIntent = new Intent (Intent.ActionSend);
+//				shareIntent.PutExtra (Intent.ExtraStream, Uri.FromFile (tempFile));
+//				shareIntent.SetType ("image/jpeg");
+//				StartActivity (Intent.CreateChooser (shareIntent, "Share photo"));
+//			}).Execute ();
 		}
 		
 		class AsyncTaskImpl : AsyncTask<object, object, bool>
